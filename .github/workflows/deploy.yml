@@ -1,0 +1,133 @@
+name: Deploy
+
+on:
+  push:
+    branches: [develop, staging, main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: [dev, staging, prod]
+      image_tag:
+        description: 'SHA tag to deploy (blank = latest commit SHA)'
+        required: false
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-west-1.amazonaws.com
+
+jobs:
+  resolve-env:
+    name: Resolve Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.resolve.outputs.env }}
+      image_tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+            TAG="${{ github.event.inputs.image_tag || github.sha }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            ENV="prod"
+            TAG="${{ github.sha }}"
+          elif [ "${{ github.ref_name }}" = "staging" ]; then
+            ENV="staging"
+            TAG="${{ github.sha }}"
+          else
+            ENV="dev"
+            TAG="${{ github.sha }}"
+          fi
+          echo "env=$ENV" >> $GITHUB_OUTPUT
+          echo "tag=$(echo $TAG | cut -c1-7)" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to ${{ needs.resolve-env.outputs.environment }}
+    runs-on: ubuntu-latest
+    needs: resolve-env
+    environment:
+      name: ${{ needs.resolve-env.outputs.environment }}
+      url: ${{ steps.output-url.outputs.url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Deploy API ─────────────────────────────────────────────────────────
+      - name: Fetch API task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition cyberwatch-api-${{ needs.resolve-env.outputs.environment }} \
+            --query taskDefinition > /tmp/api-task-def.json
+
+      - id: render-api
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/api-task-def.json
+          container-name: api
+          image: ${{ env.ECR_REGISTRY }}/cyberwatch-api:sha-${{ needs.resolve-env.outputs.image_tag }}
+
+      - name: Deploy API service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-api.outputs.task-definition }}
+          service: cyberwatch-api-${{ needs.resolve-env.outputs.environment }}
+          cluster: cyberwatch-${{ needs.resolve-env.outputs.environment }}
+          wait-for-service-stability: true
+
+      # ── Deploy Worker ──────────────────────────────────────────────────────
+      - name: Fetch Worker task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition cyberwatch-worker-${{ needs.resolve-env.outputs.environment }} \
+            --query taskDefinition > /tmp/worker-task-def.json
+
+      - id: render-worker
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/worker-task-def.json
+          container-name: worker
+          image: ${{ env.ECR_REGISTRY }}/cyberwatch-worker:sha-${{ needs.resolve-env.outputs.image_tag }}
+
+      - name: Deploy Worker service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-worker.outputs.task-definition }}
+          service: cyberwatch-worker-${{ needs.resolve-env.outputs.environment }}
+          cluster: cyberwatch-${{ needs.resolve-env.outputs.environment }}
+          wait-for-service-stability: true
+
+      - id: output-url
+        run: |
+          DNS=$(aws elbv2 describe-load-balancers \
+            --names cyberwatch-${{ needs.resolve-env.outputs.environment }}-alb \
+            --query 'LoadBalancers[0].DNSName' --output text 2>/dev/null || echo "")
+          echo "url=https://$DNS" >> $GITHUB_OUTPUT
+
+      - name: Slack — success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {"text":":large_green_circle: *CyberWatch deploy SUCCESS* → ${{ needs.resolve-env.outputs.environment }} @ `sha-${{ needs.resolve-env.outputs.image_tag }}`\nActor: ${{ github.actor }}"}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Slack — failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {"text":":red_circle: *CyberWatch deploy FAILED* → ${{ needs.resolve-env.outputs.environment }}\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

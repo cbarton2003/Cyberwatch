@@ -1,0 +1,60 @@
+name: Deploy Dashboard to GitHub Pages
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'dashboard/**'
+  workflow_dispatch:          # allow manual trigger from GitHub UI
+
+# Allow only one concurrent deployment
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Inject API URL from secret if configured, otherwise leave default
+      # This lets the deployed dashboard point straight at the AWS API
+      - name: Inject API config
+        env:
+          API_URL: ${{ secrets.DASHBOARD_API_URL }}
+          API_KEY_HINT: ${{ secrets.DASHBOARD_API_KEY_HINT }}
+        run: |
+          if [ -n "$API_URL" ]; then
+            # Patch the defaultConfig in the HTML with the real API URL
+            sed -i "s|http://localhost:3000|${API_URL}|g" dashboard/index.html
+            echo "Patched API URL to ${API_URL}"
+          fi
+          # Never inject the real API key into the HTML — users set it in the UI
+          echo "Dashboard ready for deployment"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Print deployment URL
+        run: echo "Dashboard live at ${{ steps.deploy.outputs.page_url }}"

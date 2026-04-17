@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberWatch — Threat Intelligence Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080b11;
+      --bg2:      #0d1117;
+      --bg3:      #111827;
+      --bg4:      #1a2236;
+      --border:   rgba(255,255,255,0.06);
+      --border2:  rgba(255,255,255,0.12);
+      --border3:  rgba(255,255,255,0.18);
+      --text:     #dde4f0;
+      --text2:    #7e8fa8;
+      --text3:    #3d4d65;
+      --amber:    #f59e0b;
+      --amber-bg: rgba(245,158,11,0.10);
+      --red:      #f43f5e;
+      --red-bg:   rgba(244,63,94,0.10);
+      --orange:   #fb923c;
+      --orange-bg:rgba(251,146,60,0.10);
+      --green:    #34d399;
+      --green-bg: rgba(52,211,153,0.08);
+      --blue:     #60a5fa;
+      --blue-bg:  rgba(96,165,250,0.08);
+      --gray-bg:  rgba(255,255,255,0.05);
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Syne', sans-serif;
+      --sidebar-w: 220px;
+    }
+
+    html, body, #root { height: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; overflow: hidden; }
+
+    /* ── Scrollbar ──────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .layout { display: flex; height: 100%; }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 0; z-index: 10;
+    }
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo-mark {
+      display: flex; align-items: center; gap: 9px;
+    }
+    .logo-icon {
+      width: 28px; height: 28px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--amber), var(--orange));
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      color: #000;
+    }
+    .logo-text { font-size: 15px; font-weight: 700; letter-spacing: 0.02em; color: var(--text); }
+    .logo-sub  { font-size: 9px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px; }
+
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-section-label {
+      font-size: 9px; font-family: var(--mono); letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--text3);
+      padding: 8px 10px 4px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 7px; cursor: pointer;
+      color: var(--text2); font-size: 13px; font-weight: 500;
+      transition: all 0.15s; position: relative; margin-bottom: 1px;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .nav-item:hover { background: var(--bg3); color: var(--text); border-color: var(--border); }
+    .nav-item.active { background: var(--bg4); color: var(--amber); border-color: rgba(245,158,11,0.20); }
+    .nav-icon { width: 16px; text-align: center; font-size: 14px; flex-shrink: 0; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red-bg); color: var(--red);
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 10px;
+      border: 1px solid rgba(244,63,94,0.25);
+      animation: pulse-badge 2s ease-in-out infinite;
+    }
+    @keyframes pulse-badge {
+      0%,100% { opacity: 1; } 50% { opacity: 0.6; }
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .conn-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .conn-dot.ok      { background: var(--green); box-shadow: 0 0 6px rgba(52,211,153,0.5); }
+    .conn-dot.error   { background: var(--red);   box-shadow: 0 0 6px rgba(244,63,94,0.5); }
+    .conn-dot.checking{ background: var(--amber); animation: pulse-badge 1s infinite; }
+    .conn-label { font-size: 11px; font-family: var(--mono); color: var(--text2); }
+
+    /* ── Main ───────────────────────────────────────────────────────────── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .topbar {
+      height: 54px; flex-shrink: 0;
+      display: flex; align-items: center;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      gap: 12px;
+    }
+    .topbar-title { font-size: 16px; font-weight: 700; color: var(--text); flex: 1; }
+    .topbar-sub   { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* ── Buttons ────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 7px; cursor: pointer; font-size: 12px;
+      font-family: var(--sans); font-weight: 600; border: 1px solid transparent;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-primary { background: var(--amber); color: #000; border-color: var(--amber); }
+    .btn-primary:hover { background: #fbbf24; }
+    .btn-ghost { background: transparent; color: var(--text2); border-color: var(--border2); }
+    .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+    .btn-danger { background: var(--red-bg); color: var(--red); border-color: rgba(244,63,94,0.25); }
+    .btn-danger:hover { background: rgba(244,63,94,0.18); }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Cards ──────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); }
+
+    /* ── Stat Cards ─────────────────────────────────────────────────────── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px 20px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; inset: 0; opacity: 0.04;
+      background: var(--accent-color, transparent);
+    }
+    .stat-label { font-size: 10px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 8px; }
+    .stat-value { font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+    .stat-sub   { font-size: 11px; color: var(--text3); }
+    .stat-accent { width: 3px; height: 100%; position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px 0 0 2px; }
+
+    /* ── Tables ─────────────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; padding: 8px 12px;
+      font-size: 10px; font-family: var(--mono);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text3); border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .mono { font-family: var(--mono); font-size: 12px; }
+
+    /* ── Score Bar ──────────────────────────────────────────────────────── */
+    .score-cell { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+    .score-num { font-family: var(--mono); font-size: 12px; font-weight: 700; width: 28px; flex-shrink: 0; }
+    .score-bar-track {
+      flex: 1; height: 4px; background: var(--bg4);
+      border-radius: 2px; overflow: hidden;
+    }
+    .score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+
+    /* ── Badges ─────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-family: var(--mono); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .badge-malicious  { background: var(--red-bg);    color: var(--red);    border: 1px solid rgba(244,63,94,0.2); }
+    .badge-suspicious { background: var(--amber-bg);  color: var(--amber);  border: 1px solid rgba(245,158,11,0.2); }
+    .badge-benign     { background: var(--green-bg);  color: var(--green);  border: 1px solid rgba(52,211,153,0.2); }
+    .badge-unknown    { background: var(--gray-bg);   color: var(--text2);  border: 1px solid var(--border); }
+    .badge-critical   { background: var(--red-bg);    color: var(--red);    border: 1px solid rgba(244,63,94,0.2); }
+    .badge-high       { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(251,146,60,0.2); }
+    .badge-medium     { background: var(--amber-bg);  color: var(--amber);  border: 1px solid rgba(245,158,11,0.2); }
+    .badge-low        { background: var(--blue-bg);   color: var(--blue);   border: 1px solid rgba(96,165,250,0.2); }
+    .badge-info       { background: var(--gray-bg);   color: var(--text2);  border: 1px solid var(--border); }
+    .badge-new        { background: var(--blue-bg);   color: var(--blue);   border: 1px solid rgba(96,165,250,0.2); }
+    .badge-ip         { background: rgba(96,165,250,0.08); color: var(--blue); border:1px solid rgba(96,165,250,0.2); }
+    .badge-domain     { background: rgba(167,139,250,0.08); color: #a78bfa;  border:1px solid rgba(167,139,250,0.2); }
+    .badge-hash       { background: rgba(52,211,153,0.08); color: var(--green); border:1px solid rgba(52,211,153,0.2); }
+    .badge-url        { background: rgba(251,146,60,0.08); color: var(--orange); border:1px solid rgba(251,146,60,0.2); }
+    .badge-email      { background: rgba(245,158,11,0.08); color: var(--amber); border:1px solid rgba(245,158,11,0.2); }
+
+    /* ── Forms ──────────────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 7px; padding: 8px 12px; color: var(--text);
+      font-size: 13px; font-family: var(--sans);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--amber); }
+    .form-input::placeholder { color: var(--text3); }
+    .form-textarea { font-family: var(--mono); font-size: 12px; resize: vertical; min-height: 120px; }
+    .form-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%234a5568' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; padding-right: 32px; }
+    .form-select option { background: var(--bg3); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .form-hint { font-size: 10px; font-family: var(--mono); color: var(--text3); margin-top: 4px; }
+
+    /* ── Filter bar ─────────────────────────────────────────────────────── */
+    .filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-bar .form-select, .filter-bar .form-input { width: auto; padding: 6px 10px; font-size: 12px; }
+    .filter-bar .form-select { padding-right: 28px; }
+
+    /* ── Modal ──────────────────────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+      animation: fade-in 0.15s;
+    }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 12px; width: 100%; max-width: 500px;
+      padding: 24px;
+      animation: slide-up 0.2s;
+    }
+    @keyframes slide-up { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 15px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 4px; }
+    .modal-close:hover { color: var(--text); background: var(--bg3); }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+    /* ── Settings panel ─────────────────────────────────────────────────── */
+    .settings-section { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .settings-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .settings-section-title { font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 14px; }
+
+    /* ── Empty state ────────────────────────────────────────────────────── */
+    .empty { text-align: center; padding: 48px 24px; color: var(--text3); }
+    .empty-icon { font-size: 32px; margin-bottom: 12px; }
+    .empty-text { font-size: 13px; }
+
+    /* ── Error / Toast ──────────────────────────────────────────────────── */
+    .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 10px 16px; font-size: 13px;
+      max-width: 340px; animation: slide-up 0.2s;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .toast-success { border-left: 3px solid var(--green); }
+    .toast-error   { border-left: 3px solid var(--red); }
+    .toast-info    { border-left: 3px solid var(--blue); }
+
+    /* ── Pagination ─────────────────────────────────────────────────────── */
+    .pagination { display: flex; align-items: center; gap: 4px; margin-top: 16px; }
+    .page-btn {
+      padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+      font-family: var(--mono); background: transparent;
+      border: 1px solid var(--border); color: var(--text2);
+      transition: all 0.15s;
+    }
+    .page-btn:hover { border-color: var(--border2); color: var(--text); }
+    .page-btn.active { background: var(--amber); color: #000; border-color: var(--amber); font-weight: 700; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .page-info { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-left: 8px; }
+
+    /* ── Loading spinner ────────────────────────────────────────────────── */
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--amber); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-row { text-align: center; padding: 32px; color: var(--text3); }
+
+    /* ── Scan progress ──────────────────────────────────────────────────── */
+    .scan-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+    .scan-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .scan-name { font-weight: 600; font-size: 13px; }
+    .scan-meta { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+    .scan-bars { display: flex; gap: 8px; }
+    .scan-bar { flex: 1; background: var(--bg4); border-radius: 4px; overflow: hidden; height: 6px; }
+    .scan-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s; }
+    .scan-stats { display: flex; gap: 16px; margin-top: 8px; }
+    .scan-stat { font-family: var(--mono); font-size: 11px; }
+
+    /* ── Dashboard grid ─────────────────────────────────────────────────── */
+    .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2,1fr); } .dash-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 720px)  { .stats-grid { grid-template-columns: 1fr 1fr; } .form-row { grid-template-columns: 1fr; } .form-row-3 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+import { createElement as h, useState, useEffect, useCallback, useRef, Fragment } from 'https://esm.sh/react@18';
+import { createRoot } from 'https://esm.sh/react-dom@18/client';
+
+// ─── Config (localStorage) ────────────────────────────────────────────────────
+const CFG_KEY = 'cw_config';
+const defaultConfig = {
+  apiUrl: 'http://localhost:3000',
+  apiKey: 'dev-key-local',
+};
+
+function loadConfig() {
+  try { return { ...defaultConfig, ...JSON.parse(localStorage.getItem(CFG_KEY) || '{}') }; }
+  catch { return defaultConfig; }
+}
+function saveConfig(cfg) { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+// ─── API client ───────────────────────────────────────────────────────────────
+function makeApi(config) {
+  async function req(method, path, body) {
+    const res = await fetch(config.apiUrl + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': config.apiKey },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+  return {
+    get:   (p)    => req('GET',    p),
+    post:  (p, b) => req('POST',   p, b),
+    patch: (p, b) => req('PATCH',  p, b),
+  };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmtDate = (s) => s ? new Date(s).toLocaleString('en-GB', { dateStyle:'short', timeStyle:'short' }) : '—';
+const fmtScore = (v) => v != null ? parseFloat(v).toFixed(1) : '—';
+const truncate = (s, n=36) => s && s.length > n ? s.slice(0,n) + '…' : s;
+
+function scoreColor(v) {
+  if (v >= 8) return 'var(--red)';
+  if (v >= 6) return 'var(--orange)';
+  if (v >= 3) return 'var(--amber)';
+  return 'var(--green)';
+}
+
+function ScoreBar({ score }) {
+  const v = parseFloat(score) || 0;
+  return h('div', { className: 'score-cell' },
+    h('span', { className: 'score-num', style: { color: scoreColor(v) } }, fmtScore(v)),
+    h('div', { className: 'score-bar-track' },
+      h('div', { className: 'score-bar-fill', style: { width: `${v * 10}%`, background: scoreColor(v) } })
+    )
+  );
+}
+
+function Badge({ type, value }) {
+  if (!value) return null;
+  const cls = `badge badge-${value.toLowerCase().replace(/[^a-z]/g, '')}`;
+  return h('span', { className: cls }, value);
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function useToasts() {
+  const [toasts, setToasts] = useState([]);
+  const add = useCallback((msg, kind='info') => {
+    const id = Date.now();
+    setToasts(t => [...t, { id, msg, kind }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
+  }, []);
+  return [toasts, add];
+}
+
+function ToastContainer({ toasts }) {
+  return h('div', { className: 'toast-container' },
+    toasts.map(t => h('div', { key: t.id, className: `toast toast-${t.kind}` },
+      t.kind === 'success' ? '✓' : t.kind === 'error' ? '✕' : 'ℹ',
+      t.msg
+    ))
+  );
+}
+
+// ─── Settings Modal ────────────────────────────────────────────────────────────
+function SettingsModal({ config, onSave, onClose }) {
+  const [form, setForm] = useState(config);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  return h('div', { className: 'modal-backdrop', onClick: (e) => e.target === e.currentTarget && onClose() },
+    h('div', { className: 'modal', style: { maxWidth: 460 } },
+      h('div', { className: 'modal-header' },
+        h('span', { className: 'modal-title' }, '⚙ Connection Settings'),
+        h('button', { className: 'modal-close', onClick: onClose }, '×')
+      ),
+      h('div', { className: 'settings-section' },
+        h('div', { className: 'settings-section-title' }, 'API Configuration'),
+        h('div', { className: 'form-group' },
+          h('label', { className: 'form-label' }, 'API Base URL'),
+          h('input', { className: 'form-input', value: form.apiUrl, onChange: e => set('apiUrl', e.target.value), placeholder: 'http://localhost:3000' }),
+          h('div', { className: 'form-hint' }, 'Local: http://localhost:3000  ·  AWS: https://api.yourdomain.com')
+        ),
+        h('div', { className: 'form-group' },
+          h('label', { className: 'form-label' }, 'API Key'),
+          h('input', { className: 'form-input', type: 'password', value: form.apiKey, onChange: e => set('apiKey', e.target.value), placeholder: 'dev-key-local' }),
+          h('div', { className: 'form-hint' }, 'Value of X-API-Key header  ·  Set in API_KEYS env var')
+        )
+      ),
+      h('div', { className: 'modal-footer' },
+        h('button', { className: 'btn btn-ghost', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'btn btn-primary', onClick: () => { saveConfig(form); onSave(form); onClose(); } }, 'Save & Reconnect')
+      )
+    )
+  );
+}
+
+// ─── Submit IOC Modal ─────────────────────────────────────────────────────────
+function SubmitIOCModal({ api, onClose, onSuccess, toast }) {
+  const [form, setForm] = useState({ value: '', type: 'ip', source: '', severity: 'medium', tags: '' });
+  const [loading, setLoading] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  async function submit() {
+    if (!form.value || !form.source) { toast('Value and Source are required', 'error'); return; }
+    setLoading(true);
+    try {
+      await api.post('/iocs', {
+        value: form.value.trim(),
+        type: form.type,
+        source: form.source.trim(),
+        severity: form.severity,
+        tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      });
+      toast('IOC submitted for enrichment', 'success');
+      onSuccess();
+      onClose();
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setLoading(false); }
+  }
+
+  return h('div', { className: 'modal-backdrop', onClick: e => e.target === e.currentTarget && onClose() },
+    h('div', { className: 'modal' },
+      h('div', { className: 'modal-header' },
+        h('span', { className: 'modal-title' }, '+ Submit IOC'),
+        h('button', { className: 'modal-close', onClick: onClose }, '×')
+      ),
+      h('div', { className: 'form-row' },
+        h('div', { className: 'form-group' },
+          h('label', { className: 'form-label' }, 'IOC Value *'),
+          h('input', { className: 'form-input', value: form.value, onChange: e => set('value', e.target.value), placeholder: '198.51.100.42' })
+        ),
+        h('div', { className: 'form-group' },
+          h('label', { className: 'form-label' }, 'Type *'),
+          h('select', { className: 'form-select', value: form.type, onChange: e => set('type', e.target.value) },
+            ['ip','domain','hash_md5','hash_sha1','hash_sha256','url','email'].map(t => h('option', { key: t, value: t }, t))
+          )
+        )
+      ),
+      h('div', { className: 'form-row' },
+        h('div', { className: 'form-group' },
+          h('label', { className: 'form-label' }, 'Source *'),
+          h('input', { className: 'form-input', value: form.source, onChange: e => set('source', e.target.value), placeholder: 'honeypot / threat-feed / edr' })
+        ),
+        h('div', { className: 'form-group' },
+          h('label', { className: 'form-label' }, 'Severity'),
+          h('select', { className: 'form-select', value: form.severity, onChange: e => set('severity', e.target.value) },
+            ['low','medium','high','critical'].map(s => h('option', { key: s, value: s }, s))
+          )
+        )
+      ),
+      h('div', { className: 'form-group' },
+        h('label', { className: 'form-label' }, 'Tags (comma-separated)'),
+        h('input', { className: 'form-input', value: form.tags, onChange: e => set('tags', e.target.value), placeholder: 'scanner, ssh, tor-exit' })
+      ),
+      h('div', { className: 'modal-footer' },
+        h('button', { className: 'btn btn-ghost', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'btn btn-primary', disabled: loading, onClick: submit },
+          loading && h('span', { className: 'spinner' }), 'Submit for Enrichment'
+        )
+      )
+    )
+  );
+}
+
+// ─── Acknowledge Alert Modal ──────────────────────────────────────────────────
+function AckModal({ alert, api, onClose, onSuccess, toast }) {
+  const [analyst, setAnalyst] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function submit() {
+    if (!analyst.trim()) { toast('Analyst name is required', 'error'); return; }
+    setLoading(true);
+    try {
+      await api.post(`/alerts/${alert.id}/acknowledge`, { analyst: analyst.trim(), notes: notes.trim() });
+      toast('Alert acknowledged', 'success');
+      onSuccess();
+      onClose();
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setLoading(false); }
+  }
+
+  return h('div', { className: 'modal-backdrop', onClick: e => e.target === e.currentTarget && onClose() },
+    h('div', { className: 'modal' },
+      h('div', { className: 'modal-header' },
+        h('span', { className: 'modal-title' }, '✓ Acknowledge Alert'),
+        h('button', { className: 'modal-close', onClick: onClose }, '×')
+      ),
+      h('div', { className: 'card', style: { background: 'var(--bg3)', marginBottom: 16 } },
+        h('div', { className: 'mono', style: { fontSize: 13, color: 'var(--text)' } }, alert.ioc_value),
+        h('div', { style: { display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' } },
+          h(Badge, { value: alert.ioc_type }),
+          h(Badge, { value: alert.severity }),
+          h('span', { style: { fontFamily: 'var(--mono)', fontSize: 11, color: scoreColor(alert.threat_score) } },
+            'Score: ', fmtScore(alert.threat_score)
+          )
+        )
+      ),
+      h('div', { className: 'form-group' },
+        h('label', { className: 'form-label' }, 'Analyst *'),
+        h('input', { className: 'form-input', value: analyst, onChange: e => setAnalyst(e.target.value), placeholder: 'analyst@yourorg.com' })
+      ),
+      h('div', { className: 'form-group' },
+        h('label', { className: 'form-label' }, 'Notes'),
+        h('textarea', { className: 'form-textarea', value: notes, onChange: e => setNotes(e.target.value), placeholder: 'Confirmed scanner — blocking at perimeter firewall…', style: { minHeight: 80 } })
+      ),
+      h('div', { className: 'modal-footer' },
+        h('button', { className: 'btn btn-ghost', onClick: onClose }, 'Cancel'),
+        h('button', { className: 'btn btn-primary', disabled: loading, onClick: submit },
+          loading && h('span', { className: 'spinner' }), 'Acknowledge'
+        )
+      )
+    )
+  );
+}
+
+// ─── Dashboard Tab ────────────────────────────────────────────────────────────
+function DashboardTab({ api, toast, onNavigate }) {
+  const [stats, setStats] = useState(null);
+  const [recentAlerts, setRecentAlerts] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const [iocRes, alertRes, eventRes, malRes] = await Promise.all([
+        api.get('/iocs?limit=1'),
+        api.get('/alerts?acknowledged=false&limit=5'),
+        api.get('/events?limit=5'),
+        api.get('/iocs?disposition=malicious&limit=1'),
+      ]);
+      setStats({
+        totalIocs: iocRes.meta?.total ?? 0,
+        openAlerts: alertRes.meta?.total ?? 0,
+        totalEvents: eventRes.meta?.total ?? 0,
+        maliciousIocs: malRes.meta?.total ?? 0,
+      });
+      setRecentAlerts(alertRes.data ?? []);
+      setRecentEvents(eventRes.data ?? []);
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setLoading(false); }
+  }, [api]);
+
+  useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, [load]);
+
+  if (loading) return h('div', { className: 'loading-row' }, h('span', { className: 'spinner' }));
+
+  return h(Fragment, null,
+    h('div', { className: 'stats-grid' },
+      h(StatCard, { label: 'Total IOCs', value: stats?.totalIocs ?? 0, accent: 'var(--blue)',  sub: 'All submitted indicators' }),
+      h(StatCard, { label: 'Open Alerts', value: stats?.openAlerts ?? 0, accent: 'var(--red)',  sub: 'Unacknowledged', urgent: stats?.openAlerts > 0 }),
+      h(StatCard, { label: 'Security Events', value: stats?.totalEvents ?? 0, accent: 'var(--orange)', sub: 'All ingested events' }),
+      h(StatCard, { label: 'Malicious IOCs', value: stats?.maliciousIocs ?? 0, accent: 'var(--red)', sub: 'Score ≥ 7, confirmed' }),
+    ),
+    h('div', { className: 'dash-grid' },
+      h('div', { className: 'card' },
+        h('div', { className: 'card-header' },
+          h('span', { className: 'card-title' }, 'Recent Alerts'),
+          h('button', { className: 'btn btn-ghost btn-sm', onClick: () => onNavigate('alerts') }, 'View all →')
+        ),
+        recentAlerts.length === 0
+          ? h('div', { className: 'empty' }, h('div', { className: 'empty-icon' }, '✓'), h('div', { className: 'empty-text' }, 'No open alerts'))
+          : h('div', { className: 'table-wrap' },
+              h('table', null,
+                h('thead', null, h('tr', null, th('IOC'), th('Score'), th('Severity'), th('Fired'))),
+                h('tbody', null, recentAlerts.map(a =>
+                  h('tr', { key: a.id },
+                    h('td', null, h('span', { className: 'mono', style:{fontSize:12} }, truncate(a.ioc_value,28))),
+                    h('td', null, h(ScoreBar, { score: a.threat_score })),
+                    h('td', null, h(Badge, { value: a.severity })),
+                    h('td', null, h('span', { style:{fontSize:11,color:'var(--text3)',fontFamily:'var(--mono)'} }, fmtDate(a.fired_at)))
+                  )
+                ))
+              )
+            )
+      ),
+      h('div', { className: 'card' },
+        h('div', { className: 'card-header' },
+          h('span', { className: 'card-title' }, 'Recent Events'),
+          h('button', { className: 'btn btn-ghost btn-sm', onClick: () => onNavigate('events') }, 'View all →')
+        ),
+        recentEvents.length === 0
+          ? h('div', { className: 'empty' }, h('div', { className: 'empty-icon' }, '—'), h('div', { className: 'empty-text' }, 'No events yet'))
+          : h('div', { className: 'table-wrap' },
+              h('table', null,
+                h('thead', null, h('tr', null, th('Title'), th('Sev'), th('Category'), th('Time'))),
+                h('tbody', null, recentEvents.map(e =>
+                  h('tr', { key: e.id },
+                    h('td', null, truncate(e.title, 30)),
+                    h('td', null, h(Badge, { value: e.severity })),
+                    h('td', null, h('span', { style:{fontSize:11,fontFamily:'var(--mono)',color:'var(--text2)'} }, e.category?.replace(/_/g,' '))),
+                    h('td', null, h('span', { style:{fontSize:11,color:'var(--text3)',fontFamily:'var(--mono)'} }, fmtDate(e.occurred_at)))
+                  )
+                ))
+              )
+            )
+      )
+    )
+  );
+}
+
+function StatCard({ label, value, accent, sub, urgent }) {
+  return h('div', { className: 'stat-card', style: { '--accent-color': accent } },
+    h('div', { className: 'stat-accent', style: { background: accent } }),
+    h('div', { className: 'stat-label' }, label),
+    h('div', { className: 'stat-value', style: urgent ? { color: accent } : {} }, value.toLocaleString()),
+    h('div', { className: 'stat-sub' }, sub)
+  );
+}
+
+const th = (t) => h('th', null, t);
+
+// ─── IOCs Tab ─────────────────────────────────────────────────────────────────
+function IOCsTab({ api, toast }) {
+  const [data, setData] = useState([]);
+  const [meta, setMeta] = useState({ total: 0 });
+  const [filters, setFilters] = useState({ type: '', disposition: '', min_score: '', severity: '' });
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [showSubmit, setShowSubmit] = useState(false);
+  const LIMIT = 20;
+
+  const setFilter = (k, v) => { setFilters(f => ({ ...f, [k]: v })); setPage(0); };
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams({ limit: LIMIT, offset: page * LIMIT });
+      if (filters.type)        q.set('type', filters.type);
+      if (filters.disposition) q.set('disposition', filters.disposition);
+      if (filters.min_score)   q.set('min_score', filters.min_score);
+      if (filters.severity)    q.set('severity', filters.severity);
+      const res = await api.get('/iocs?' + q.toString());
+      setData(res.data ?? []);
+      setMeta(res.meta ?? { total: 0 });
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setLoading(false); }
+  }, [api, filters, page]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const totalPages = Math.ceil(meta.total / LIMIT);
+
+  return h(Fragment, null,
+    showSubmit && h(SubmitIOCModal, { api, toast, onClose: () => setShowSubmit(false), onSuccess: load }),
+    h('div', { className: 'filter-bar' },
+      h('select', { className: 'form-select', value: filters.type, onChange: e => setFilter('type', e.target.value) },
+        h('option', { value: '' }, 'All Types'),
+        ['ip','domain','hash_md5','hash_sha256','url','email'].map(t => h('option', { key: t, value: t }, t))
+      ),
+      h('select', { className: 'form-select', value: filters.disposition, onChange: e => setFilter('disposition', e.target.value) },
+        h('option', { value: '' }, 'All Dispositions'),
+        ['malicious','suspicious','benign','unknown'].map(d => h('option', { key: d, value: d }, d))
+      ),
+      h('select', { className: 'form-select', value: filters.severity, onChange: e => setFilter('severity', e.target.value) },
+        h('option', { value: '' }, 'All Severities'),
+        ['critical','high','medium','low','info'].map(s => h('option', { key: s, value: s }, s))
+      ),
+      h('input', { className: 'form-input', placeholder: 'Min score (0–10)', value: filters.min_score, onChange: e => setFilter('min_score', e.target.value), style:{width:140} }),
+      h('button', { className: 'btn btn-ghost btn-sm', onClick: load }, loading ? h('span',{className:'spinner'}) : '↻ Refresh'),
+      h('button', { className: 'btn btn-primary btn-sm', style:{marginLeft:'auto'}, onClick: () => setShowSubmit(true) }, '+ Submit IOC')
+    ),
+    h('div', { className: 'card', style:{padding:0} },
+      h('div', { className: 'table-wrap' },
+        h('table', null,
+          h('thead', null,
+            h('tr', null, th('Value'), th('Type'), th('Score'), th('Disposition'), th('Severity'), th('Source'), th('Status'), th('Last Seen'))
+          ),
+          h('tbody', null,
+            loading && data.length === 0
+              ? h('tr', null, h('td', { colSpan: 8, className: 'loading-row' }, h('span', { className: 'spinner' })))
+              : data.length === 0
+              ? h('tr', null, h('td', { colSpan: 8 }, h('div', { className: 'empty' }, h('div',{className:'empty-icon'},'◎'), h('div',{className:'empty-text'},'No IOCs found — submit one to get started'))))
+              : data.map(ioc => h('tr', { key: ioc.id },
+                  h('td', null, h('span', { className: 'mono', title: ioc.value }, truncate(ioc.value, 40))),
+                  h('td', null, h(Badge, { value: ioc.type?.replace('hash_','') || ioc.type })),
+                  h('td', null, h(ScoreBar, { score: ioc.threat_score })),
+                  h('td', null, h(Badge, { value: ioc.disposition })),
+                  h('td', null, h(Badge, { value: ioc.severity })),
+                  h('td', null, h('span', { style:{fontSize:11,color:'var(--text2)'} }, truncate(ioc.source, 20))),
+                  h('td', null, h('span', { style:{fontFamily:'var(--mono)',fontSize:10,color: ioc.enrichment_status==='enriched'?'var(--green)':ioc.enrichment_status==='failed'?'var(--red)':'var(--amber)'} }, ioc.enrichment_status)),
+                  h('td', null, h('span', { style:{fontSize:11,color:'var(--text3)',fontFamily:'var(--mono)'} }, fmtDate(ioc.last_seen)))
+                ))
+          )
+        )
+      )
+    ),
+    totalPages > 1 && h('div', { className: 'pagination' },
+      h('button', { className: 'page-btn', disabled: page === 0, onClick: () => setPage(p => p-1) }, '←'),
+      Array.from({length: Math.min(totalPages,7)}, (_,i) => h('button', { key: i, className: `page-btn ${i===page?'active':''}`, onClick: () => setPage(i) }, i+1)),
+      h('button', { className: 'page-btn', disabled: page >= totalPages-1, onClick: () => setPage(p => p+1) }, '→'),
+      h('span', { className: 'page-info' }, `${meta.total} total`)
+    )
+  );
+}
+
+// ─── Events Tab ───────────────────────────────────────────────────────────────
+function EventsTab({ api, toast }) {
+  const [data, setData] = useState([]);
+  const [meta, setMeta] = useState({ total: 0 });
+  const [filters, setFilters] = useState({ severity: '', category: '', status: '' });
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [showSubmit, setShowSubmit] = useState(false);
+  const [eventForm, setEventForm] = useState({ title:'', severity:'medium', category:'other', source_ip:'', description:'' });
+  const [submitting, setSubmitting] = useState(false);
+  const LIMIT = 25;
+
+  const setFilter = (k, v) => { setFilters(f => ({ ...f, [k]: v })); setPage(0); };
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams({ limit: LIMIT, offset: page * LIMIT });
+      if (filters.severity) q.set('severity', filters.severity);
+      if (filters.category) q.set('category', filters.category);
+      if (filters.status)   q.set('status', filters.status);
+      const res = await api.get('/events?' + q.toString());
+      setData(res.data ?? []); setMeta(res.meta ?? { total: 0 });
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setLoading(false); }
+  }, [api, filters, page]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const setEF = (k, v) => setEventForm(f => ({ ...f, [k]: v }));
+
+  async function submitEvent() {
+    if (!eventForm.title) { toast('Title is required', 'error'); return; }
+    setSubmitting(true);
+    try {
+      const body = { ...eventForm };
+      if (!body.source_ip) delete body.source_ip;
+      await api.post('/events', body);
+      toast('Security event ingested', 'success');
+      setShowSubmit(false);
+      setEventForm({ title:'', severity:'medium', category:'other', source_ip:'', description:'' });
+      load();
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setSubmitting(false); }
+  }
+
+  const cats = ['brute_force','malware','phishing','data_exfiltration','privilege_escalation','lateral_movement','c2_communication','reconnaissance','dos','policy_violation','other'];
+
+  return h(Fragment, null,
+    showSubmit && h('div', { className: 'modal-backdrop', onClick: e => e.target === e.currentTarget && setShowSubmit(false) },
+      h('div', { className: 'modal', style:{maxWidth:520} },
+        h('div', { className: 'modal-header' },
+          h('span', { className: 'modal-title' }, '+ Ingest Security Event'),
+          h('button', { className: 'modal-close', onClick: () => setShowSubmit(false) }, '×')
+        ),
+        h('div', { className: 'form-group' }, h('label', { className: 'form-label' }, 'Title *'), h('input', { className: 'form-input', value: eventForm.title, onChange: e=>setEF('title',e.target.value), placeholder:'SSH brute force from 198.51.100.42' })),
+        h('div', { className: 'form-row' },
+          h('div', { className: 'form-group' }, h('label', { className: 'form-label' }, 'Severity'), h('select', { className: 'form-select', value: eventForm.severity, onChange: e=>setEF('severity',e.target.value) }, ['info','low','medium','high','critical'].map(s => h('option',{key:s,value:s},s)))),
+          h('div', { className: 'form-group' }, h('label', { className: 'form-label' }, 'Category'), h('select', { className: 'form-select', value: eventForm.category, onChange: e=>setEF('category',e.target.value) }, cats.map(c => h('option',{key:c,value:c},c.replace(/_/g,' ')))))
+        ),
+        h('div', { className: 'form-group' }, h('label', { className: 'form-label' }, 'Source IP'), h('input', { className: 'form-input', value: eventForm.source_ip, onChange: e=>setEF('source_ip',e.target.value), placeholder:'198.51.100.42 (optional)' })),
+        h('div', { className: 'form-group' }, h('label', { className: 'form-label' }, 'Description'), h('textarea', { className: 'form-textarea', value: eventForm.description, onChange: e=>setEF('description',e.target.value), style:{minHeight:72} })),
+        h('div', { className: 'modal-footer' },
+          h('button', { className: 'btn btn-ghost', onClick: () => setShowSubmit(false) }, 'Cancel'),
+          h('button', { className: 'btn btn-primary', disabled: submitting, onClick: submitEvent }, submitting && h('span',{className:'spinner'}), 'Ingest Event')
+        )
+      )
+    ),
+    h('div', { className: 'filter-bar' },
+      h('select', { className: 'form-select', value: filters.severity, onChange: e => setFilter('severity', e.target.value) },
+        h('option',{value:''},'All Severities'), ['critical','high','medium','low','info'].map(s => h('option',{key:s,value:s},s))
+      ),
+      h('select', { className: 'form-select', value: filters.category, onChange: e => setFilter('category', e.target.value) },
+        h('option',{value:''},'All Categories'), cats.map(c => h('option',{key:c,value:c},c.replace(/_/g,' ')))
+      ),
+      h('select', { className: 'form-select', value: filters.status, onChange: e => setFilter('status', e.target.value) },
+        h('option',{value:''},'All Statuses'), ['new','investigating','contained','resolved','false_positive'].map(s => h('option',{key:s,value:s},s.replace(/_/g,' ')))
+      ),
+      h('button', { className: 'btn btn-ghost btn-sm', onClick: load }, loading ? h('span',{className:'spinner'}) : '↻ Refresh'),
+      h('button', { className: 'btn btn-primary btn-sm', style:{marginLeft:'auto'}, onClick: () => setShowSubmit(true) }, '+ Ingest Event')
+    ),
+    h('div', { className: 'card', style:{padding:0} },
+      h('div', { className: 'table-wrap' },
+        h('table', null,
+          h('thead', null, h('tr', null, th('Title'), th('Severity'), th('Category'), th('Source IP'), th('Status'), th('Occurred'))),
+          h('tbody', null,
+            loading && data.length === 0
+              ? h('tr', null, h('td', { colSpan: 6, className: 'loading-row' }, h('span', { className: 'spinner' })))
+              : data.length === 0
+              ? h('tr', null, h('td', { colSpan: 6 }, h('div', { className: 'empty' }, h('div',{className:'empty-icon'},'⚡'), h('div',{className:'empty-text'},'No security events — ingest one to get started'))))
+              : data.map(e => h('tr', { key: e.id },
+                  h('td', null, truncate(e.title, 40)),
+                  h('td', null, h(Badge, { value: e.severity })),
+                  h('td', null, h('span', { style:{fontSize:11,fontFamily:'var(--mono)',color:'var(--text2)'} }, e.category?.replace(/_/g,' '))),
+                  h('td', null, e.source_ip ? h('span', { className: 'mono', style:{fontSize:12} }, e.source_ip) : h('span', { style:{color:'var(--text3)'} }, '—')),
+                  h('td', null, h(Badge, { value: e.status?.replace(/_/g,' ') })),
+                  h('td', null, h('span', { style:{fontSize:11,color:'var(--text3)',fontFamily:'var(--mono)'} }, fmtDate(e.occurred_at)))
+                ))
+          )
+        )
+      )
+    ),
+    meta.total > LIMIT && h('div', { className: 'pagination' },
+      h('button', { className: 'page-btn', disabled: page === 0, onClick: () => setPage(p=>p-1) }, '←'),
+      h('button', { className: 'page-btn', disabled: page >= Math.ceil(meta.total/LIMIT)-1, onClick: () => setPage(p=>p+1) }, '→'),
+      h('span', { className: 'page-info' }, `${meta.total} total`)
+    )
+  );
+}
+
+// ─── Alerts Tab ───────────────────────────────────────────────────────────────
+function AlertsTab({ api, toast, onAlertCountChange }) {
+  const [data, setData] = useState([]);
+  const [meta, setMeta] = useState({ total: 0 });
+  const [ackOnly, setAckOnly] = useState(false);
+  const [ackTarget, setAckTarget] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const LIMIT = 25;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams({ limit: LIMIT, offset: page * LIMIT });
+      if (!ackOnly) q.set('acknowledged', 'false');
+      const res = await api.get('/alerts?' + q.toString());
+      setData(res.data ?? []); setMeta(res.meta ?? { total: 0 });
+      if (!ackOnly && onAlertCountChange) onAlertCountChange(res.meta?.total ?? 0);
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setLoading(false); }
+  }, [api, ackOnly, page]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return h(Fragment, null,
+    ackTarget && h(AckModal, { alert: ackTarget, api, toast, onClose: () => setAckTarget(null), onSuccess: () => { setAckTarget(null); load(); } }),
+    h('div', { className: 'filter-bar' },
+      h('label', { style:{display:'flex',alignItems:'center',gap:6,cursor:'pointer',color:'var(--text2)',fontSize:13} },
+        h('input', { type:'checkbox', checked: ackOnly, onChange: e => { setAckOnly(e.target.checked); setPage(0); }, style:{accentColor:'var(--amber)'} }),
+        'Show acknowledged'
+      ),
+      h('button', { className: 'btn btn-ghost btn-sm', onClick: load, style:{marginLeft:'auto'} }, loading ? h('span',{className:'spinner'}) : '↻ Refresh')
+    ),
+    h('div', { className: 'card', style:{padding:0} },
+      h('div', { className: 'table-wrap' },
+        h('table', null,
+          h('thead', null, h('tr', null, th('IOC Value'), th('Type'), th('Score'), th('Severity'), th('Fired'), th('Status'), th('Action'))),
+          h('tbody', null,
+            loading && data.length === 0
+              ? h('tr', null, h('td', { colSpan: 7, className: 'loading-row' }, h('span', { className: 'spinner' })))
+              : data.length === 0
+              ? h('tr', null, h('td', { colSpan: 7 }, h('div', { className: 'empty' }, h('div',{className:'empty-icon'},'✓'), h('div',{className:'empty-text'},'No open alerts — all clear'))))
+              : data.map(a => h('tr', { key: a.id },
+                  h('td', null, h('span', { className: 'mono', style:{fontSize:12}, title: a.ioc_value }, truncate(a.ioc_value, 38))),
+                  h('td', null, h(Badge, { value: a.ioc_type })),
+                  h('td', null, h(ScoreBar, { score: a.threat_score })),
+                  h('td', null, h(Badge, { value: a.severity })),
+                  h('td', null, h('span', { style:{fontSize:11,color:'var(--text3)',fontFamily:'var(--mono)'} }, fmtDate(a.fired_at))),
+                  h('td', null,
+                    a.acknowledged
+                      ? h('span', { style:{fontSize:11,color:'var(--green)',fontFamily:'var(--mono)'} }, '✓ acked by ' + (a.acknowledged_by || '?'))
+                      : h('span', { style:{fontSize:11,color:'var(--amber)',fontFamily:'var(--mono)'} }, '● open')
+                  ),
+                  h('td', null,
+                    !a.acknowledged && h('button', { className: 'btn btn-ghost btn-sm', onClick: () => setAckTarget(a) }, 'Acknowledge')
+                  )
+                ))
+          )
+        )
+      )
+    ),
+    meta.total > LIMIT && h('div', { className: 'pagination' },
+      h('button', { className: 'page-btn', disabled: page === 0, onClick: () => setPage(p=>p-1) }, '←'),
+      h('button', { className: 'page-btn', disabled: page >= Math.ceil(meta.total/LIMIT)-1, onClick: () => setPage(p=>p+1) }, '→'),
+      h('span', { className: 'page-info' }, `${meta.total} total`)
+    )
+  );
+}
+
+// ─── Scans Tab ────────────────────────────────────────────────────────────────
+function ScansTab({ api, toast }) {
+  const [scans, setScans] = useState([]);
+  const [form, setForm] = useState({ name: '', values: '' });
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function loadScans() {
+    try {
+      const res = await api.get('/scans?limit=20');
+      setScans(res.data ?? []);
+    } catch {}
+  }
+
+  useEffect(() => { loadScans(); const t = setInterval(loadScans, 8000); return () => clearInterval(t); }, [api]);
+
+  async function submit() {
+    const vals = form.values.split('\n').map(v=>v.trim()).filter(Boolean);
+    if (!form.name || vals.length === 0) { toast('Name and at least one value are required', 'error'); return; }
+    setSubmitting(true);
+    try {
+      await api.post('/scans', { name: form.name.trim(), values: vals });
+      toast(`Scan submitted — ${vals.length} IOCs queued`, 'success');
+      setForm({ name: '', values: '' });
+      loadScans();
+    } catch (e) { toast(e.message, 'error'); }
+    finally { setSubmitting(false); }
+  }
+
+  return h('div', { style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,alignItems:'start'} },
+    h('div', { className: 'card' },
+      h('div', { className: 'card-header' }, h('span', { className: 'card-title' }, 'New Bulk Scan')),
+      h('div', { className: 'form-group' },
+        h('label', { className: 'form-label' }, 'Scan Name'),
+        h('input', { className: 'form-input', value: form.name, onChange: e=>setForm(f=>({...f,name:e.target.value})), placeholder:'Threat feed — 2025-01-15' })
+      ),
+      h('div', { className: 'form-group' },
+        h('label', { className: 'form-label' }, 'IOC Values (one per line, max 10,000)'),
+        h('textarea', { className: 'form-textarea', value: form.values, onChange: e=>setForm(f=>({...f,values:e.target.value})), placeholder:'198.51.100.42\nevil-domain.xyz\nd41d8cd98f00b204e9800998ecf8427e\nhttps://malware.example.com/payload.exe', style:{minHeight:200} })
+      ),
+      h('div', { style:{display:'flex',justifyContent:'space-between',alignItems:'center'} },
+        h('span', { style:{fontSize:11,fontFamily:'var(--mono)',color:'var(--text3)'} },
+          form.values.split('\n').filter(v=>v.trim()).length, ' values entered'
+        ),
+        h('button', { className: 'btn btn-primary', disabled: submitting, onClick: submit },
+          submitting && h('span',{className:'spinner'}), 'Submit Scan'
+        )
+      )
+    ),
+    h('div', null,
+      h('div', { className: 'card-title', style:{marginBottom:12} }, 'Recent Scans'),
+      scans.length === 0
+        ? h('div', { className: 'empty' }, h('div',{className:'empty-icon'},'⊕'), h('div',{className:'empty-text'},'No scans yet'))
+        : scans.map(s => h(ScanCard, { key: s.id, scan: s }))
+    )
+  );
+}
+
+function ScanCard({ scan }) {
+  const pct = scan.total_iocs > 0 ? (scan.processed / scan.total_iocs) * 100 : 0;
+  const malPct = scan.processed > 0 ? (scan.malicious / scan.processed) * 100 : 0;
+  const susPct = scan.processed > 0 ? (scan.suspicious / scan.processed) * 100 : 0;
+  const benPct = scan.processed > 0 ? (scan.benign / scan.processed) * 100 : 0;
+
+  return h('div', { className: 'scan-card' },
+    h('div', { className: 'scan-header' },
+      h('div', null,
+        h('div', { className: 'scan-name' }, scan.name),
+        h('div', { className: 'scan-meta' }, fmtDate(scan.created_at), ' · ', scan.total_iocs, ' IOCs')
+      ),
+      h(Badge, { value: scan.status })
+    ),
+    scan.status === 'running' && h('div', null,
+      h('div', { style:{display:'flex',justifyContent:'space-between',fontSize:10,fontFamily:'var(--mono)',color:'var(--text3)',marginBottom:4} },
+        h('span', null, 'Progress'),
+        h('span', null, Math.round(pct), '%')
+      ),
+      h('div', { className: 'scan-bar' }, h('div', { className: 'scan-bar-fill', style:{width:`${pct}%`,background:'var(--amber)'} }))
+    ),
+    scan.processed > 0 && h(Fragment, null,
+      h('div', { style:{display:'flex',gap:4,marginTop:8} },
+        h('div', { className:'scan-bar', title:'malicious' }, h('div',{className:'scan-bar-fill',style:{width:`${malPct}%`,background:'var(--red)'}})),
+        h('div', { className:'scan-bar', title:'suspicious' }, h('div',{className:'scan-bar-fill',style:{width:`${susPct}%`,background:'var(--amber)'}})),
+        h('div', { className:'scan-bar', title:'benign' }, h('div',{className:'scan-bar-fill',style:{width:`${benPct}%`,background:'var(--green)'}}))
+      ),
+      h('div', { className: 'scan-stats' },
+        h('span', {className:'scan-stat',style:{color:'var(--red)'  }}, '✕ ', scan.malicious,  ' malicious'),
+        h('span', {className:'scan-stat',style:{color:'var(--amber)'}}, '◐ ', scan.suspicious, ' suspicious'),
+        h('span', {className:'scan-stat',style:{color:'var(--green)'}}, '✓ ', scan.benign,     ' benign')
+      )
+    )
+  );
+}
+
+// ─── Nav config ───────────────────────────────────────────────────────────────
+const NAV = [
+  { id: 'dashboard', label: 'Dashboard',  icon: '◈' },
+  { id: 'iocs',      label: 'IOCs',        icon: '◉' },
+  { id: 'events',    label: 'Events',      icon: '⚡' },
+  { id: 'alerts',    label: 'Alerts',      icon: '⚠' },
+  { id: 'scans',     label: 'Bulk Scans',  icon: '⊕' },
+];
+
+const TAB_TITLES = {
+  dashboard: { title: 'Overview',    sub: 'Live threat intelligence summary' },
+  iocs:      { title: 'IOCs',        sub: 'Indicators of compromise + enrichment' },
+  events:    { title: 'Events',      sub: 'Security event ingestion' },
+  alerts:    { title: 'Alerts',      sub: 'Auto-generated threat alerts' },
+  scans:     { title: 'Bulk Scans',  sub: 'Batch IOC enrichment jobs' },
+};
+
+// ─── Root App ─────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState('dashboard');
+  const [config, setConfig] = useState(loadConfig);
+  const [showSettings, setShowSettings] = useState(false);
+  const [connStatus, setConnStatus] = useState('checking');
+  const [openAlerts, setOpenAlerts] = useState(0);
+  const [toasts, addToast] = useToasts();
+
+  const api = makeApi(config);
+
+  const checkConn = useCallback(async () => {
+    setConnStatus('checking');
+    try {
+      await fetch(config.apiUrl + '/health', { signal: AbortSignal.timeout(4000) });
+      setConnStatus('ok');
+    } catch { setConnStatus('error'); }
+  }, [config]);
+
+  useEffect(() => { checkConn(); const t = setInterval(checkConn, 20000); return () => clearInterval(t); }, [checkConn]);
+
+  const handleConfigSave = (cfg) => { setConfig(cfg); };
+
+  const { title, sub } = TAB_TITLES[tab] || {};
+
+  return h(Fragment, null,
+    h(ToastContainer, { toasts }),
+    showSettings && h(SettingsModal, { config, onSave: handleConfigSave, onClose: () => setShowSettings(false) }),
+    h('div', { className: 'layout' },
+      h('aside', { className: 'sidebar' },
+        h('div', { className: 'sidebar-logo' },
+          h('div', { className: 'sidebar-logo-mark' },
+            h('div', { className: 'logo-icon' }, 'CW'),
+            h('div', null,
+              h('div', { className: 'logo-text' }, 'CyberWatch'),
+              h('div', { className: 'logo-sub' }, 'Threat Intel Platform')
+            )
+          )
+        ),
+        h('nav', { className: 'sidebar-nav' },
+          h('div', { className: 'nav-section-label' }, 'Navigation'),
+          NAV.map(n => h('div', {
+              key: n.id,
+              className: `nav-item ${tab === n.id ? 'active' : ''}`,
+              onClick: () => setTab(n.id),
+            },
+            h('span', { className: 'nav-icon' }, n.icon),
+            n.label,
+            n.id === 'alerts' && openAlerts > 0 && h('span', { className: 'nav-badge' }, openAlerts)
+          ))
+        ),
+        h('div', { className: 'sidebar-footer' },
+          h('div', { className: `conn-dot ${connStatus}` }),
+          h('div', { className: 'conn-label', style:{flex:1} },
+            connStatus === 'ok' ? 'Connected' : connStatus === 'error' ? 'Disconnected' : 'Checking…'
+          ),
+          h('button', {
+            onClick: () => setShowSettings(true),
+            style: { background:'none', border:'none', color:'var(--text2)', cursor:'pointer', fontSize:16, padding:'2px 4px', borderRadius:4 },
+            title: 'Settings'
+          }, '⚙')
+        )
+      ),
+      h('main', { className: 'main' },
+        h('div', { className: 'topbar' },
+          h('div', null,
+            h('div', { className: 'topbar-title' }, title),
+            h('div', { className: 'topbar-sub' }, sub)
+          )
+        ),
+        h('div', { className: 'content' },
+          tab === 'dashboard' && h(DashboardTab, { api, toast: addToast, onNavigate: setTab }),
+          tab === 'iocs'      && h(IOCsTab,       { api, toast: addToast }),
+          tab === 'events'    && h(EventsTab,     { api, toast: addToast }),
+          tab === 'alerts'    && h(AlertsTab,     { api, toast: addToast, onAlertCountChange: setOpenAlerts }),
+          tab === 'scans'     && h(ScansTab,      { api, toast: addToast }),
+        )
+      )
+    )
+  );
+}
+
+createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+version: "3.9"
+
+networks:
+  cyberwatch:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cyberwatch
+      POSTGRES_USER: cyberwatch
+      POSTGRES_PASSWORD: devpassword123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/api/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - cyberwatch
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyberwatch -d cyberwatch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - cyberwatch
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./services/api
+      target: builder
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cyberwatch
+      DB_USER: cyberwatch
+      DB_PASSWORD: devpassword123
+      DB_SSL: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TLS: "false"
+      LOG_LEVEL: debug
+      SERVICE_NAME: cyberwatch-api
+      API_KEYS: dev-key-local,test-key-ci
+      ALLOWED_ORIGINS: "http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080"
+      ALERT_SCORE_THRESHOLD: "7.0"
+      RATE_LIMIT_MAX: "1000"
+    volumes:
+      - ./services/api/src:/app/src:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - cyberwatch
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./services/worker
+      target: production
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cyberwatch
+      DB_USER: cyberwatch
+      DB_PASSWORD: devpassword123
+      DB_SSL: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TLS: "false"
+      WORKER_CONCURRENCY: 3
+      LOG_LEVEL: debug
+      SERVICE_NAME: cyberwatch-worker
+      ALERT_SCORE_THRESHOLD: "7.0"
+    networks:
+      - cyberwatch
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  bull-board:
+    image: deadly0/bull-board
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3001:3000"
+    networks:
+      - cyberwatch
+    depends_on:
+      - redis
+    profiles:
+      - monitoring
